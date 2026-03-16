@@ -6,10 +6,11 @@ import {
   Post,
   Res,
   UploadedFile,
+  UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
 import { FilesService } from './files.service';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { fileNamer, fileFilter } from './helpers';
 import express from 'express';
@@ -52,5 +53,17 @@ export class FilesController {
     return {
       fileName: secureUrl,
     };
+  }
+
+  @Post('uploadProducts')
+  @UseInterceptors(FilesInterceptor('files'))
+  uploadProductsFile(@UploadedFiles() files: Array<Express.Multer.File>) {
+    if (!files) {
+      throw new BadRequestException('');
+    }
+
+    files.forEach((file) => {
+      console.log(file.destination);
+    });
   }
 }

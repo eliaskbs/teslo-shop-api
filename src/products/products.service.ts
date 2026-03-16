@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
   BadRequestException,
@@ -16,7 +15,6 @@ import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { validate } from 'uuid';
 import { ProductImage } from './entities/products-image.entity';
 
-
 @Injectable()
 export class ProductsService {
   private readonly logger = new Logger(ProductsService.name);
@@ -25,7 +23,7 @@ export class ProductsService {
     private readonly productRepository: Repository<Product>,
     @InjectRepository(ProductImage)
     private readonly productImageRepository: Repository<ProductImage>,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(createProductDto: CreateProductDto) {
@@ -33,11 +31,13 @@ export class ProductsService {
       const { images = [], ...productDatails } = createProductDto;
       const product = this.productRepository.create({
         ...productDatails,
-        images: images.map((image) => this.productImageRepository.create({url: image})),
+        images: images.map((image) =>
+          this.productImageRepository.create({ url: image }),
+        ),
       });
       await this.productRepository.save(product);
 
-      return {...product, images};
+      return { ...product, images };
     } catch (error) {
       this.handlerDBException(error);
     }
@@ -53,9 +53,9 @@ export class ProductsService {
       },
     });
 
-    return products.map(({images, ...rest}) => ({
+    return products.map(({ images, ...rest }) => ({
       ...rest,
-      images: images?.map(image => image.url)
+      images: images?.map((image) => image.url),
     }));
   }
 
@@ -64,7 +64,6 @@ export class ProductsService {
 
     if (validate(term)) {
       product = await this.productRepository.findOneBy({ id: term });
-
     } else {
       const queryBuilder = this.productRepository.createQueryBuilder('prod');
       product = await queryBuilder
@@ -81,23 +80,21 @@ export class ProductsService {
     if (!product)
       throw new NotFoundException(`Producto with id ${term} not found`);
 
-
     return product;
   }
 
   async findOnePlain(term: string) {
-    const {images = [], ...rest} = await this.findOne(term);
+    const { images = [], ...rest } = await this.findOne(term);
     return {
       ...rest,
-      images: images.map(image => image.url)
-    }
+      images: images.map((image) => image.url),
+    };
   }
 
   async update(id: string, updateProductDto: UpdateProductDto) {
+    const { images, ...toUpdate } = updateProductDto;
 
-    const {images, ...toUpdate} = updateProductDto
-
-    const product = await this.productRepository.preload({ id, ...toUpdate});
+    const product = await this.productRepository.preload({ id, ...toUpdate });
 
     if (!product)
       throw new NotFoundException(`Product with id: ${id} not found`);
@@ -108,10 +105,11 @@ export class ProductsService {
     await queryRunner.startTransaction();
 
     try {
-
-      if(images){
-        await queryRunner.manager.delete(ProductImage, {product: { id } })
-        product.images = images.map(image => this.productImageRepository.create({url: image}));
+      if (images) {
+        await queryRunner.manager.delete(ProductImage, { product: { id } });
+        product.images = images.map((image) =>
+          this.productImageRepository.create({ url: image }),
+        );
       }
 
       await queryRunner.manager.save(product);
@@ -120,13 +118,11 @@ export class ProductsService {
       return this.findOnePlain(id);
       // return await this.productRepository.save(product);
     } catch (error) {
-
       await queryRunner.rollbackTransaction();
       await queryRunner.release();
 
       this.handlerDBException(error);
     }
-
   }
 
   async remove(id: string) {
@@ -134,7 +130,7 @@ export class ProductsService {
     await this.productRepository.remove(product);
   }
 
-  async removeAllProduct(){
+  async removeAllProduct() {
     const queryBuilder = this.productRepository.createQueryBuilder();
     await queryBuilder.where({}).delete().execute();
   }
