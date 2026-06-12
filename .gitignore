@@ -3,7 +3,7 @@
 /node_modules
 /build
 
-/postgres
+/postgresgit s
 .env
 # Logs
 logs
