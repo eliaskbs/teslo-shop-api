@@ -1,11 +1,11 @@
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
-import { User } from '../entities/user.entity';
-import { JwtPayload } from '../interfaces/jwt-payload.interface';
-import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ConfigService } from '@nestjs/config';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ExtractJwt, Strategy } from 'passport-jwt';
+import { ConfigService } from '@nestjs/config';
+import { Repository } from 'typeorm';
+import { JwtPayload } from '../interfaces/jwt-payload.interface';
+import { User } from '../entities/user.entity';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -14,24 +14,21 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly userRepository: Repository<User>,
     configService: ConfigService,
   ) {
-    const jwtSecret = configService.get<string>('JWT_SECRET');
-    if (!jwtSecret) {
-      throw new Error('JWT_SECRET is not defined in configuration');
-    }
     super({
-      secretOrKey: jwtSecret,
+      secretOrKey: configService.get<string>('JWT_SECRET')!,
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
     });
   }
 
   async validate(payload: JwtPayload): Promise<User> {
     const { id } = payload;
+
     const user = await this.userRepository.findOneBy({ id });
 
-    if (!user) throw new UnauthorizedException('Token not valid');
-    if (!user.isActive)
-      throw new UnauthorizedException('User is not active, talk with an admin');
+    if (!user) throw new UnauthorizedException('Token no valid');
 
+    if (!user.isActive)
+      throw new UnauthorizedException('User is not active, talk with admin');
     return user;
   }
 }

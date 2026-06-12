@@ -1,23 +1,18 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import {
-  BadRequestException,
-  Injectable,
-  InternalServerErrorException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { CreateUserDto } from './dto/create-user.dto';
 import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
-import { InjectRepository } from '@nestjs/typeorm';
+
 import * as bcrypt from 'bcrypt';
-import { CreateUserDto, LoginUserDto } from './dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from './entities/user.entity';
+import { LoginUserDto } from './dto/login-user.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    @InjectRepository(User) private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -25,20 +20,22 @@ export class AuthService {
     try {
       const { password, ...userData } = createUserDto;
 
-      const salt = bcrypt.genSaltSync();
-      const hashedPassword = bcrypt.hashSync(password, salt);
-
-      const createUserDtoWithHashedPassword = {
+      const user = this.userRepository.create({
         ...userData,
-        password: hashedPassword,
-      };
+        password: bcrypt.hashSync(password, 10),
+      });
 
-      const user = this.userRepository.create(createUserDtoWithHashedPassword);
       await this.userRepository.save(user);
-      delete (user as { password?: string }).password;
-      return { ...user, token: this.getJwtToken({ id: user.id }) };
+
+      const { ...userSave } = user;
+
+      return {
+        ...userSave,
+        token: this.getJwtToken({ id: user.id }),
+        password: undefined,
+      };
     } catch (error) {
-      this.handleDBErrors(error);
+      this.handleDBError(error);
     }
   }
 
@@ -46,17 +43,26 @@ export class AuthService {
     const { password, email } = loginUserDto;
 
     const user = await this.userRepository.findOne({
-      where: { email },
+      where: { email: email },
       select: { email: true, password: true, id: true },
     });
 
-    if (!user)
-      throw new UnauthorizedException('Credentials are not valid (email)');
+    if (!user) throw new BadRequestException('User not found with email');
 
     if (!bcrypt.compareSync(password, user.password))
-      throw new UnauthorizedException('Credentials are not valid (password)');
+      throw new BadRequestException('Invalid credentials');
 
-    return { ...user, token: this.getJwtToken({ id: user.id }) };
+    return {
+      ...user,
+      token: this.getJwtToken({ id: user.id }),
+    };
+  }
+
+  checkStatus(user: User) {
+    return {
+      ...user,
+      toake: this.getJwtToken({ id: user.id }),
+    };
   }
 
   private getJwtToken(payload: JwtPayload) {
@@ -64,10 +70,7 @@ export class AuthService {
     return token;
   }
 
-  private handleDBErrors(error: any): never {
-    if (error.code === '23505') throw new BadRequestException(error.detail);
-
-    console.log(error);
-    throw new InternalServerErrorException('Please check server logs');
+  private handleDBError(error: any) {
+    if (error.code === '23505') throw new BadRequestException(error.datail);
   }
 }

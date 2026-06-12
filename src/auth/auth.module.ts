@@ -14,21 +14,18 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   imports: [
     ConfigModule,
     TypeOrmModule.forFeature([User]),
-    PassportModule.register({
-      defaultStrategy: 'jwt',
-    }),
+    PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        // console.log(configService.get('JWT_SECRET'));
         return {
           secret: configService.get('JWT_SECRET'),
           signOptions: { expiresIn: '2h' },
         };
       },
     }),
-    /*JwtModule.register({secret: process.env.JWT_SECRET, signOptions: { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }})*/
+    // JwtModule.register({ secret: '1234', signOptions: { expiresIn: '1d' } }),
   ],
   exports: [TypeOrmModule, JwtStrategy, PassportModule, JwtModule],
 })

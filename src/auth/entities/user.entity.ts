@@ -3,8 +3,10 @@ import {
   BeforeUpdate,
   Column,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Product } from '../../products/entities/product.entity';
 
 @Entity('users')
 export class User {
@@ -20,19 +22,25 @@ export class User {
   @Column('text')
   fullName: string;
 
-  @Column('boolean', { default: true })
+  @Column('bool', { default: true })
   isActive: boolean;
 
-  @Column('text', { array: true, default: ['user'] })
+  @Column('text', {
+    array: true,
+    default: ['user'],
+  })
   roles: string[];
 
+  @OneToMany(() => Product, (product) => product.user)
+  product: Product[];
+
   @BeforeInsert()
-  checkEmail() {
-    this.email = this.email.toLocaleLowerCase().trim();
+  checkEmailBeforeInsert() {
+    this.email = this.email.toLowerCase().trim();
   }
 
   @BeforeUpdate()
-  checkEmailUpdate() {
-    this.checkEmail();
+  checkEmailBeforeUpdate() {
+    this.checkEmailBeforeInsert();
   }
 }
